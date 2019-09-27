@@ -1,43 +1,44 @@
 module line_buf #(
-  parameter int PIXEL_WIDTH    = 12,
-  parameter int PIXELS_PER_CLK = 4.
-  parameter int LINE_BUF_LIMIT = 1936
+  parameter int PX_WIDTH    = 12,
+  parameter int PX_PER_CLK = 4.
+  parameter int MAX_LINE_SIZE  = 1936
 )(
-  input                                                clk_i,
-  input                                                rst_i,
-  input [PIXELS_PER_CLK - 1 : 0][PIXEL_WIDTH - 1 : 0]  px_data_i,
-  input [PIXELS_PER_CLK - 1 : 0]                       px_data_val_i,
-  input                                                line_start_i,
-  input                                                line_end_i,
-  input                                                frame_start_i,
-  input                                                frame_end_i,
-  input                                                pop_line_i,
-  output [PIXELS_PER_CLK - 1 : 0][PIXEL_WIDTH - 1 : 0] px_data_o,
-  output [PIXELS_PER_CLK - 1 : 0]                      px_data_val_o,
-  output                                               line_start_o,
-  output                                               line_end_o,
-  output                                               frame_start_o,
-  output                                               frame_end_o,
-  output                                               empty_o
+  input                                         clk_i,
+  input                                         rst_i,
+  input [PX_PER_CLK - 1 : 0][PX_WIDTH - 1 : 0]  px_data_i,
+  input [PX_PER_CLK - 1 : 0]                    px_data_val_i,
+  input                                         line_start_i,
+  input                                         line_end_i,
+  input                                         frame_start_i,
+  input                                         frame_end_i,
+  input                                         pop_line_i,
+  output [PX_PER_CLK - 1 : 0][PX_WIDTH - 1 : 0] px_data_o,
+  output [PX_PER_CLK - 1 : 0]                   px_data_val_o,
+  output                                        line_start_o,
+  output                                        line_end_o,
+  output                                        frame_start_o,
+  output                                        frame_end_o,
+  output                                        empty_o,
+  output                                        unread_o
 );
 
-localparam int DATA_WIDTH = PIXEL_WIDTH * PIXELS_PER_CLK;
-localparam int ADDR_WIDTH = $clog2( MAX_LINE_WIDTH / PIXELS_PER_CLK + 1 );
+localparam int DATA_WIDTH = PX_WIDTH * PX_PER_CLK;
+localparam int ADDR_WIDTH = $clog2( MAX_LINE_SIZE / PX_PER_CLK + 1 );
 
-logic [ADDR_WIDTH - 1 : 0]     wr_ptr;
-logic [ADDR_WIDTH - 1 : 0]     line_size;
-logic [ADDR_WIDTH - 1 : 0]     rd_ptr;
-logic                          read_in_progress;
-logic [PIXELS_PER_CLK - 1 : 0] line_end_valid;
-logic                          push_data;
-logic                          empty;
-logic                          was_sof;
-logic                          was_eof;
-logic                          line_start;
-logic                          line_end;
-logic                          frame_start;
-logic                          frame_end;
-logic [PIXELS_PER_CLK - 1 : 0] px_data_val;
+logic [ADDR_WIDTH - 1 : 0] wr_ptr;
+logic [ADDR_WIDTH - 1 : 0] line_size;
+logic [ADDR_WIDTH - 1 : 0] rd_ptr;
+logic                      read_in_progress;
+logic [PX_PER_CLK - 1 : 0] line_end_valid;
+logic                      push_data;
+logic                      empty;
+logic                      was_sof;
+logic                      was_eof;
+logic                      line_start;
+logic                      line_end;
+logic                      frame_start;
+logic                      frame_end;
+logic [PX_PER_CLK - 1 : 0] px_data_val;
 
 assign push_data = |px_data_val_i;
 
@@ -163,6 +164,16 @@ always_ff @( posedge clk_i, posedge rst_i )
     else
       frame_end <= 1'b0;
 
+always_ff @( posedge clk_i, posedge rst_i )
+  if( rst_i )
+    unread <= 1'b0;
+  else
+    if( push_data && line_end_i )
+      unread <= 1'b1;
+    else
+      if( !empty && pop_line )
+        unread <= 1'b0;
+
 dual_port_ram #(
   .DATA_WIDTH ( DATA_WIDTH ),
   .ADDR_WIDTH ( ADDR_WIDTH )
@@ -177,6 +188,7 @@ dual_port_ram #(
 );
 
 assign empty_o       = empty;
+assign unread_o      = unread;
 assign line_start_o  = line_start;
 assign line_end_o    = line_end;
 assign frame_start_o = frame_start;
