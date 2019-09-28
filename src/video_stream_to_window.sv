@@ -189,22 +189,22 @@ always_ff @( posedge clk_i, posedge rst_i )
   else
     if( shift )
       begin
-        data_shift_reg[0]        <= data_to_shift_reg;
-        data_val_shift_reg[0]    <= data_val_to_shift_reg;
-        line_start_shift_reg[0]  <= line_start_to_shift_reg;
-        line_end_shift_reg[0]    <= line_end_to_shift_reg;
-        frame_start_shift_reg[0] <= frame_start_to_shift_reg;
-        frame_end_shift_reg[0]   <= frame_end_to_shift_reg;
-        unread_shift_reg[0]      <= unread_to_shift_reg;
-        for( int i = 1; i < SHIFT_STAGES; i++ )
+        data_shift_reg[SHIFT_STAGES - 1]        <= data_to_shift_reg;
+        data_val_shift_reg[SHIFT_STAGES - 1]    <= data_val_to_shift_reg;
+        line_start_shift_reg[SHIFT_STAGES - 1]  <= line_start_to_shift_reg;
+        line_end_shift_reg[SHIFT_STAGES - 1]    <= line_end_to_shift_reg;
+        frame_start_shift_reg[SHIFT_STAGES - 1] <= frame_start_to_shift_reg;
+        frame_end_shift_reg[SHIFT_STAGES - 1]   <= frame_end_to_shift_reg;
+        unread_shift_reg[SHIFT_STAGES - 1]      <= unread_to_shift_reg;
+        for( int i = 0; i < ( SHIFT_STAGES - 1 ); i++ )
           begin
-            data_shift_reg[i]        <= data_shift_reg[i - 1];
-            data_val_shift_reg[i]    <= data_val_shift_reg[i - 1];
-            line_start_shift_reg[i]  <= line_start_shift_reg[i - 1];
-            line_end_shift_reg[i]    <= line_end_shift_reg[i - 1];
-            frame_start_shift_reg[i] <= frame_start_shift_reg[i - 1];
-            frame_end_shift_reg[i]   <= frame_end_shift_reg[i - 1];
-            unread_shift_reg[i]      <= unread_shift_reg[i - 1];
+            data_shift_reg[i]        <= data_shift_reg[i + 1];
+            data_val_shift_reg[i]    <= data_val_shift_reg[i + 1];
+            line_start_shift_reg[i]  <= line_start_shift_reg[i + 1];
+            line_end_shift_reg[i]    <= line_end_shift_reg[i + 1];
+            frame_start_shift_reg[i] <= frame_start_shift_reg[i + 1];
+            frame_end_shift_reg[i]   <= frame_end_shift_reg[i + 1];
+            unread_shift_reg[i]      <= unread_shift_reg[i + 1];
           end
       end
 
@@ -226,8 +226,10 @@ always_comb
     end
 
 assign line_start_o  = line_start_shift_reg[0];
-assign line_end_o    = ACT_BUF_SIZE == REAL_BUF_SIZE ? line_end_shift_reg[0] : line_end_shift_reg[1];
+assign line_end_o    = ACT_BUF_SIZE == REAL_BUF_SIZE ? line_end_shift_reg[SHIFT_STAGES - 1][WIN_SIZE - 1] : 
+                                                       line_end_shift_reg[SHIFT_STAGES - 2][WIN_SIZE - 1];
 assign frame_start_o = frame_start_shift_reg[0];
-assign frame_end_o   = ACT_BUF_SIZE == REAL_BUF_SIZE ? frame_end_shift_reg[0] : frame_end_shift_reg[1]; 
+assign frame_end_o   = ACT_BUF_SIZE == REAL_BUF_SIZE ? frame_end_shift_reg[SHIFT_STAGES - 1][WIN_SIZE - 1] : 
+                                                       frame_end_shift_reg[SHIFT_STAGES - 2][WIN_SIZE - 1]; 
 
 endmodule
