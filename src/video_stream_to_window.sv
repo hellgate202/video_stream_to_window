@@ -222,7 +222,8 @@ always_comb
   for( int i = 0; i < PX_PER_CLK; i++ )
     begin
       win_data_o[i]     = act_data_reg[WIN_SIZE + i - 1 -: WIN_SIZE];
-      win_data_val_o[i] = act_data_val_reg[WIN_SIZE + i - 1 -: WIN_SIZE][WIN_SIZE - 1];
+      win_data_val_o[i] = act_data_val_reg[WIN_SIZE / 2 + i][WIN_SIZE - 1] && 
+                          |act_data_val_reg[WIN_SIZE - 1 : 0];
     end
 
 assign line_start_o  = line_start_shift_reg[0];
