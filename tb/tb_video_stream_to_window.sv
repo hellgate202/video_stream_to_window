@@ -36,9 +36,9 @@ initial
 
 function automatic void remap_frame_rom ();
 
-  for( int y = 0; y < RES_Y; y++ )
-    for( int x = 0; x < RES_X; x++ )
-      frame[y][x] = frame_rom[(y * x)];
+  for( int y = 1; y <= RES_Y; y++ )
+    for( int x = 1; x <= RES_X; x++ )
+      frame[y - 1][x - 1] = frame_rom[(y * x - 1)];
 
 endfunction
 
@@ -76,13 +76,13 @@ task automatic start_video_stream();
     for( int x = 0; x < ( TOTAL_X / PX_PER_CLK ); x++ )
       begin
         @( posedge clk );
-        if( y < RES_Y && x < ( words_per_line + add_px ) )
+        if( ( y < RES_Y ) && ( x < ( words_per_line + add_px ) ) )
           begin
             if( y == 0 && x == 0 )
               frame_start_i <= 1'b1;
             else
               frame_start_i <= 1'b0;
-            if( x == words_per_line + add_px - 1 )
+            if( x == ( words_per_line + add_px - 1 ) )
               begin
                 line_end_i <= 1'b1;
                 if( add_px )

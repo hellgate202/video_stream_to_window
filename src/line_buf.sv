@@ -40,6 +40,7 @@ logic                      frame_start;
 logic                      frame_end;
 logic [PX_PER_CLK - 1 : 0] px_data_val;
 logic                      unread;
+logic                      rd_req;
 
 assign push_data = |px_data_val_i;
 
@@ -74,7 +75,7 @@ always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     read_in_progress <= 1'b0;
   else
-    if( rd_ptr == ( line_size - 1'b1 ) )
+    if( rd_ptr == ( line_size - 'b1 ) )
       read_in_progress <= 1'b0;
     else
       if( pop_line_i && !empty )
@@ -113,7 +114,7 @@ always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     line_start <= 1'b0;
   else
-    if( pop_line_i && empty )
+    if( rd_req )
       line_start <= 1'b1;
     else
       line_start <= 1'b0;
@@ -151,7 +152,7 @@ always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     frame_start <= 1'b0;
   else
-    if( pop_line_i && !empty && was_sof )
+    if( rd_req && was_sof )
       frame_start <= 1'b1;
     else
       frame_start <= 1'b0;
@@ -174,6 +175,12 @@ always_ff @( posedge clk_i, posedge rst_i )
     else
       if( !empty && pop_line_i )
         unread <= 1'b0;
+
+always_ff @( posedge clk_i, posedge rst_i )
+  if( rst_i )
+    rd_req <= 1'b0;
+  else
+    rd_req <= pop_line_i && !empty;
 
 dual_port_ram #(
   .DATA_WIDTH ( DATA_WIDTH ),
