@@ -66,6 +66,8 @@ logic [REAL_BUF_SIZE - 1 : 0][WIN_SIZE - 1 : 0][PX_WIDTH - 1 : 0]               
 logic [ACT_BUF_SIZE - 1 : 0][WIN_SIZE - 1 : 0][PX_WIDTH - 1 : 0]                     act_data_reg;
 logic [REAL_BUF_SIZE - 1 : 0][WIN_SIZE - 1 : 0]                                      data_val_shift_reg_unpacked;
 logic [ACT_BUF_SIZE - 1 : 0][WIN_SIZE - 1 : 0]                                       act_data_val_reg;
+logic [WIN_SIZE : 0][PX_PER_CLK - 1 : 0][PX_WIDTH - 1 : 0]                           data_from_buf_unpacked;
+logic [WIN_SIZE : 0][PX_PER_CLK - 1 : 0]                                             data_val_from_buf_unpacked;
 
 
 assign push_data  = |px_data_val_i;
@@ -110,38 +112,46 @@ always_comb
       
 genvar i;
 
+always_comb
+  for( int i = 0; i <= WIN_SIZE; i++ )
+    for( int j = 0; j <= PX_PER_CLK; j++ )
+    begin
+      data_from_buf[j][i]     = data_from_buf_unpacked[i][j];
+      data_val_from_buf[j][i] = data_val_from_buf_unpacked[i][j];
+    end
+
 generate
   for( i = 0; i <= WIN_SIZE; i++ )
     begin : line_buffers
       line_buf #(
-        .PX_WIDTH      ( PX_WIDTH                                 ),
-        .PX_PER_CLK    ( PX_PER_CLK                               ),
-        .MAX_LINE_SIZE ( MAX_LINE_SIZE                            )
+        .PX_WIDTH      ( PX_WIDTH                      ),
+        .PX_PER_CLK    ( PX_PER_CLK                    ),
+        .MAX_LINE_SIZE ( MAX_LINE_SIZE                 )
       ) line_buf (
-        .clk_i         ( clk_i                                    ),
-        .rst_i         ( rst_i                                    ),
-        .px_data_i     ( px_data_i                                ),
-        .px_data_val_i ( px_data_val_masked[i]                    ),
-        .line_start_i  ( line_start_i                             ),
-        .line_end_i    ( line_end_i                               ),
-        .frame_start_i ( frame_start_i                            ),
-        .frame_end_i   ( frame_end_i                              ),
-        .pop_line      ( read_buf[i]                              ),
-        .px_data_o     ( data_from_buf[PX_PER_CLK - 1 : 0][i]     ),
-        .px_data_val_o ( data_val_from_buf[PX_PER_CLK - 1 : 0][i] ),
-        .line_start_o  ( line_start_from_buf[i]                   ),
-        .line_end_o    ( line_end_from_buf[i]                     ),
-        .frame_start_o ( frame_start_from_buf[i]                  ),
-        .frame_end_o   ( frame_end_from_buf[i]                    ),
-        .empty_o       (                                          ),
-        .unread_o      ( unread_from_buf[i]                       )
+        .clk_i         ( clk_i                         ),
+        .rst_i         ( rst_i                         ),
+        .px_data_i     ( px_data_i                     ),
+        .px_data_val_i ( px_data_val_masked[i]         ),
+        .line_start_i  ( line_start_i                  ),
+        .line_end_i    ( line_end_i                    ),
+        .frame_start_i ( frame_start_i                 ),
+        .frame_end_i   ( frame_end_i                   ),
+        .pop_line_i    ( read_buf[i]                   ),
+        .px_data_o     ( data_from_buf_unpacked[i]     ),
+        .px_data_val_o ( data_val_from_buf_unpacked[i] ),
+        .line_start_o  ( line_start_from_buf[i]        ),
+        .line_end_o    ( line_end_from_buf[i]          ),
+        .frame_start_o ( frame_start_from_buf[i]       ),
+        .frame_end_o   ( frame_end_from_buf[i]         ),
+        .empty_o       (                               ),
+        .unread_o      ( unread_from_buf[i]            )
       );
     end
 endgenerate
 
 always_comb
   begin
-    int inact_pos = 0;
+    int inact_pos;
     for( int i = 0; i <= WIN_SIZE; i++ )
       if( active_rd_buf[i] == 1'b0 )
         inact_pos = i;

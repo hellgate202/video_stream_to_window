@@ -1,7 +1,7 @@
 module line_buf #(
-  parameter int PX_WIDTH    = 12,
-  parameter int PX_PER_CLK = 4.
-  parameter int MAX_LINE_SIZE  = 1936
+  parameter int PX_WIDTH      = 12,
+  parameter int PX_PER_CLK    = 4,
+  parameter int MAX_LINE_SIZE = 1936
 )(
   input                                         clk_i,
   input                                         rst_i,
@@ -39,6 +39,7 @@ logic                      line_end;
 logic                      frame_start;
 logic                      frame_end;
 logic [PX_PER_CLK - 1 : 0] px_data_val;
+logic                      unread;
 
 assign push_data = |px_data_val_i;
 
@@ -171,7 +172,7 @@ always_ff @( posedge clk_i, posedge rst_i )
     if( push_data && line_end_i )
       unread <= 1'b1;
     else
-      if( !empty && pop_line )
+      if( !empty && pop_line_i )
         unread <= 1'b0;
 
 dual_port_ram #(
@@ -183,6 +184,7 @@ dual_port_ram #(
   .wr_data_i  ( px_data_i  ),
   .wr_i       ( push_data  ),
   .rd_clk_i   ( clk_i      ),
+  .rd_addr_i  ( rd_ptr     ),
   .rd_data_o  ( px_data_o  ),
   .rd_i       ( 1'b1       )
 );

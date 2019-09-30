@@ -63,28 +63,29 @@ endtask
 
 task automatic start_video_stream();
 
+  int add_px         = 0;
   int words_per_line = RES_X / PX_PER_CLK;
   int last_word_px   = RES_X % PX_PER_CLK;
 
   if( last_word_px > 0 )
-    ADD_PX = 1;
+    add_px = 1;
   else
-    ADD_PX = 0;
+    add_px = 0;
 
   for( int y = 0; y < TOTAL_Y; y++ )
     for( int x = 0; x < ( TOTAL_X / PX_PER_CLK ); x++ )
       begin
         @( posedge clk );
-        if( y < RES_Y && x < ( words_per_line + ADD_PX ) )
+        if( y < RES_Y && x < ( words_per_line + add_px ) )
           begin
             if( y == 0 && x == 0 )
               frame_start_i <= 1'b1;
             else
               frame_start_i <= 1'b0;
-            if( x == words_per_line + ADD_PX - 1 )
+            if( x == words_per_line + add_px - 1 )
               begin
                 line_end_i <= 1'b1;
-                if( ADD_PX )
+                if( add_px )
                   px_data_val <= last_word_px;
                 else
                   px_data_val <= '1;
@@ -94,7 +95,7 @@ task automatic start_video_stream();
                 line_end_i  <= 1'b0;
                 px_data_val <= '1;
               end
-            if( y == ( RES_Y - 1 ) && x == ( words_per_line + ADD_PX - 1 ) )
+            if( y == ( RES_Y - 1 ) && x == ( words_per_line + add_px - 1 ) )
               frame_end_i <= 1'b1;
             else
               frame_end_i <= 1'b0;
