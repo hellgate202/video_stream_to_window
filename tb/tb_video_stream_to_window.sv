@@ -119,6 +119,104 @@ task automatic start_video_stream();
 
 endtask
 
+task automatic verification();
+
+  int y = 0;
+  int x = 0;
+  bit [PX_PER_CLK - 1 : 0][WIN_SIZE - 1 : 0][WIN_SIZE - 1 : 0][PX_WIDTH - 1 : 0] ref_window;
+
+  forever
+    begin
+      @( posedge clk );
+      if( |win_data_val )
+        begin
+          for( int p = 0; p < PX_PER_CLK; p++ )
+            for( int win_y = 0; win_y < WIN_SIZE; win_y++ )
+              for( int win_x = 0; win_x < WIN_SIZE; win_x++ )
+                ref_window[p][win_y][win_x] = frame[y + win_y][x + win_x + p];
+          for( int i = 0; i < PX_PER_CLK; i ++ )
+            if( ref_window[i] != win_data[i] && win_data_val[i] )
+              begin
+                $display( "Error! Data missmatch!" );
+                $display( "X = %0d", x );
+                $display( "Y = %0d", y ); 
+                $display( "Received: " );
+                for( int y = 0; y < WIN_SIZE; y++ )
+                  begin
+                    for( int p = 0; p < PX_PER_CLK; p++ )
+                      begin
+                        for( int x = 0; x < WIN_SIZE; x++ )
+                          $write( "%0h\t", win_data[p][y][x] );
+                        $write( "\t\t" );
+                      end
+                    $write( "\n" );
+                  end
+                $display( "Should: " );
+                for( int y = 0; y < WIN_SIZE; y++ )
+                  begin
+                    for( int p = 0; p < PX_PER_CLK; p++ )
+                      begin
+                        for( int x = 0; x < WIN_SIZE; x++ )
+                          $write( "%0h\t", ref_window[p][y][x] );
+                        $write( "\t\t" );
+                      end
+                    $write( "\n" );
+                  end
+                repeat( 10 )
+                  @( posedge clk );
+                $stop();
+              end
+          if( x == 0 )
+            begin
+              if( y == 0 && !frame_start_o )
+                begin
+                  $display( "Error! frame_start_o signal is absent" );
+                  repeat( 10 )
+                    @( posedge clk );
+                  $stop();
+                end
+              else
+                if( !line_start_o )
+                  begin
+                    $display( "Error! line_start_o signal is absent" );
+                    repeat( 10 )
+                      @( posedge clk );
+                    $stop();
+                  end
+                else
+                  x = x + PX_PER_CLK;
+            end
+          else
+            if( x == ( RES_X - PX_PER_CLK ) )
+              begin
+                if( y == ( RES_Y - WIN_SIZE ) && !frame_end_o )
+                  begin
+                    $display( "Error! frame_end_o signal is absent" );
+                    repeat( 10 )
+                      @( posedge clk );
+                    $stop();
+                  end
+                else
+                  if( !line_end_o )
+                    begin
+                      $display( "Error! line_end_o signal is absent" );
+                      repeat( 10 )
+                        @( posedge clk );
+                      $stop();
+                    end
+                  else
+                    begin
+                      y = y + 1;
+                      x = 0;
+                    end
+              end
+            else
+              x = x + PX_PER_CLK;
+        end
+    end
+
+endtask
+
 video_stream_to_window #(
   .PX_WIDTH       ( PX_WIDTH      ),
   .PX_PER_CLK     ( PX_PER_CLK    ),
@@ -145,14 +243,16 @@ initial
   begin
     fork
       clk_gen();
+      verification();
     join_none
     apply_rst();
     remap_frame_rom();
     fork
       start_video_stream();
     join_none
-    while( !frame_end_i )
+    while( !frame_end_o )
       @( posedge clk );
+    $display( "Everything is fine" );
     $stop();
   end
 

@@ -1,0 +1,11 @@
+*.bak
+*.swp
+build/c5_pin_model_dump.txt
+build/db
+build/*.qws
+build/incremental_db
+build/output_files
+build/simulation
+tb/transcript
+tb/work
+tb/vsim.wlf

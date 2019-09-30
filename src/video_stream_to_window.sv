@@ -1,7 +1,7 @@
 module video_stream_to_window #(
   parameter int PX_WIDTH      = 12,
   parameter int PX_PER_CLK    = 4,
-  parameter int WIN_SIZE      = 5,
+  parameter int WIN_SIZE      = 3,
   parameter int MAX_LINE_SIZE = 4112
 )(
   input                                                                                   clk_i,
@@ -212,12 +212,17 @@ assign act_data_reg     = data_shift_reg_unpacked[ACT_BUF_SIZE - 1 : 0];
 assign act_data_val_reg = data_val_shift_reg_unpacked[ACT_BUF_SIZE - 1 : 0];
 
 always_comb
+  for( int p = 0; p < PX_PER_CLK; p++ )
+    for( int y = 0; y < WIN_SIZE; y++ )
+      for( int x = 0; x < WIN_SIZE; x++ )
+        win_data_o[p][y][x] = act_data_reg[p + x][y];
+
+always_comb
   begin
-    for( int i = 0; i < PX_PER_CLK; i++ )
+    for( int p = 0; p < PX_PER_CLK; p++ )
       begin
-        win_data_o[i]     = act_data_reg[WIN_SIZE + i - 1 -: WIN_SIZE];
-        win_data_val_o[i] = act_data_val_reg[WIN_SIZE / 2 + i][WIN_SIZE - 1] && 
-                          |act_data_val_reg[WIN_SIZE - 1 : 0];
+        win_data_val_o[p] = act_data_val_reg[WIN_SIZE / 2 + p][WIN_SIZE - 1] &&
+                            act_data_val_reg[0][WIN_SIZE - 1];
       end
     if( !valid_output_d1 )
       win_data_val_o = win_data_val_o >> 1;
