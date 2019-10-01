@@ -1,7 +1,7 @@
 module video_stream_to_window #(
-  parameter int PX_WIDTH      = 12,
+  parameter int PX_WIDTH      = 10,
   parameter int PX_PER_CLK    = 4,
-  parameter int WIN_SIZE      = 3,
+  parameter int WIN_SIZE      = 5,
   parameter int MAX_LINE_SIZE = 4112
 )(
   input                                                                                   clk_i,

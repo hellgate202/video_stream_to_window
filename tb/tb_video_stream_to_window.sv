@@ -2,8 +2,8 @@
 module tb_video_stream_to_window;
 
 parameter int    PX_WIDTH      = 12;
-parameter int    PX_PER_CLK    = 4;
-parameter int    WIN_SIZE      = 3;
+parameter int    PX_PER_CLK    = 3;
+parameter int    WIN_SIZE      = 5;
 parameter int    MAX_LINE_SIZE = 1936;
 parameter int    CLK_T         = 13468;
 parameter int    RES_X         = 1936;
@@ -123,6 +123,7 @@ task automatic verification();
 
   int y = 0;
   int x = 0;
+  int valid;
   bit [PX_PER_CLK - 1 : 0][WIN_SIZE - 1 : 0][WIN_SIZE - 1 : 0][PX_WIDTH - 1 : 0] ref_window;
 
   forever
@@ -130,11 +131,15 @@ task automatic verification();
       @( posedge clk );
       if( |win_data_val )
         begin
+          valid = 0;
+          for( int i = 0; i < PX_PER_CLK; i++ )
+            if( win_data_val[i] )
+              valid++;
           for( int p = 0; p < PX_PER_CLK; p++ )
             for( int win_y = 0; win_y < WIN_SIZE; win_y++ )
               for( int win_x = 0; win_x < WIN_SIZE; win_x++ )
                 ref_window[p][win_y][win_x] = frame[y + win_y][x + win_x + p];
-          for( int i = 0; i < PX_PER_CLK; i ++ )
+          for( int i = 0; i < PX_PER_CLK; i++ )
             if( ref_window[i] != win_data[i] && win_data_val[i] )
               begin
                 $display( "Error! Data missmatch!" );
@@ -143,7 +148,7 @@ task automatic verification();
                 $display( "Received: " );
                 for( int y = 0; y < WIN_SIZE; y++ )
                   begin
-                    for( int p = 0; p < PX_PER_CLK; p++ )
+                    for( int p = 0; p < valid; p++ )
                       begin
                         for( int x = 0; x < WIN_SIZE; x++ )
                           $write( "%0h\t", win_data[p][y][x] );
@@ -154,7 +159,7 @@ task automatic verification();
                 $display( "Should: " );
                 for( int y = 0; y < WIN_SIZE; y++ )
                   begin
-                    for( int p = 0; p < PX_PER_CLK; p++ )
+                    for( int p = 0; p < valid; p++ )
                       begin
                         for( int x = 0; x < WIN_SIZE; x++ )
                           $write( "%0h\t", ref_window[p][y][x] );
@@ -183,13 +188,11 @@ task automatic verification();
                       @( posedge clk );
                     $stop();
                   end
-                else
-                  x = x + PX_PER_CLK;
             end
           else
-            if( x == ( RES_X - PX_PER_CLK ) )
+            if( ( RES_X - x ) <= WIN_SIZE )
               begin
-                if( y == ( RES_Y - WIN_SIZE ) && !frame_end_o )
+                if( ( RES_Y - y ) <= WIN_SIZE && !frame_end_o )
                   begin
                     $display( "Error! frame_end_o signal is absent" );
                     repeat( 10 )
@@ -204,14 +207,16 @@ task automatic verification();
                         @( posedge clk );
                       $stop();
                     end
-                  else
-                    begin
-                      y = y + 1;
-                      x = 0;
-                    end
               end
-            else
-              x = x + PX_PER_CLK;
+          x += valid;
+          if( x == RES_X - WIN_SIZE + 1 )
+            begin
+              x = 0;
+              if( y == RES_Y - WIN_SIZE + 1 )
+                y = 0;
+              else
+                y += 1;
+            end
         end
     end
 
