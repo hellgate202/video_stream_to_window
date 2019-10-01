@@ -218,28 +218,37 @@ always_comb
       for( int x = 0; x < WIN_SIZE; x++ )
         win_data_o[p][y][x] = act_data_reg[p + x][y];
 
-always_ff @( posedge clk_i, posedge rst_i )
-  if( rst_i )
-    valid_data_in_shift_reg <= 1'b0;
+generate
+  if( ACT_BUF_SIZE == REAL_BUF_SIZE )
+    begin : full
+      always_ff @( posedge clk_i, posedge rst_i )
+        if( rst_i )
+          valid_data_in_shift_reg <= 1'b0;
+        else
+          if( line_start_shift_reg[1][WIN_SIZE - 1] )
+            valid_data_in_shift_reg <= 1'b1;
+          else
+            if( !( |data_val_to_shift_reg[WIN_SIZE - 1] ) )
+              valid_data_in_shift_reg <= 1'b0;
+    end
   else
-    if( SHIFT_STAGES == 1 && line_start_to_shift_reg[WIN_SIZE - 1] || 
-       line_start_shift_reg[1][WIN_SIZE - 1] )
-      valid_data_in_shift_reg <= 1'b1;
-    else
-      if( ACT_BUF_SIZE == REAL_BUF_SIZE && line_end_shift_reg[SHIFT_STAGES - 1][WIN_SIZE - 1] ||
-          line_end_shift_reg[SHIFT_STAGES - 2][WIN_SIZE - 1] )
-        valid_data_in_shift_reg <= 1'b0;
+    begin : croped
+      always_ff @( posedge clk_i, posedge rst_i )
+        if( rst_i )
+          valid_data_in_shift_reg <= 1'b0;
+        else
+          if( line_start_shift_reg[1][WIN_SIZE - 1] )
+            valid_data_in_shift_reg <= 1'b1;
+          else
+            if( !( |data_val_shift_reg_unpacked[REAL_BUF_SIZE - 1 : ACT_BUF_SIZE] ) )
+              valid_data_in_shift_reg <= 1'b0;
+    end
+endgenerate
 
 always_comb
-  begin
-    for( int p = 0; p < PX_PER_CLK; p++ )
-      begin
-        win_data_val_o[p] = act_data_val_reg[WIN_SIZE / 2 + p][WIN_SIZE - 1] &&
-                            valid_data_in_shift_reg;
-      end
-    if( !valid_output_d1 )
-      win_data_val_o = win_data_val_o >> 1;
-  end
+  for( int p = 0; p < PX_PER_CLK; p++ )
+    win_data_val_o[PX_PER_CLK - 1 - p] = act_data_val_reg[ACT_BUF_SIZE - 1 - p][WIN_SIZE - 1] &&
+                                         valid_data_in_shift_reg;
 
 assign valid_output  = |data_val_to_shift_reg;
 

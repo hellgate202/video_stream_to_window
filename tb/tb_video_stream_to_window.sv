@@ -2,8 +2,8 @@
 module tb_video_stream_to_window;
 
 parameter int    PX_WIDTH      = 12;
-parameter int    PX_PER_CLK    = 3;
-parameter int    WIN_SIZE      = 5;
+parameter int    PX_PER_CLK    = 4;
+parameter int    WIN_SIZE      = 3;
 parameter int    MAX_LINE_SIZE = 1936;
 parameter int    CLK_T         = 13468;
 parameter int    RES_X         = 1936;
@@ -65,7 +65,7 @@ task automatic start_video_stream();
 
   int add_px         = 0;
   int words_per_line = RES_X / PX_PER_CLK;
-  int last_word_px   = RES_X % PX_PER_CLK;
+  int last_word_px   = 2 ** ( RES_X % PX_PER_CLK ) - 1;
 
   if( last_word_px > 0 )
     add_px = 1;
